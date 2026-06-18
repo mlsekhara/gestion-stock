@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: stock
+      POSTGRES_PASSWORD: stock
+      POSTGRES_DB: gestion_stock
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stock -d gestion_stock"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: on-failure
+    environment:
+      DATABASE_URL: postgresql+psycopg2://stock:stock@db:5432/gestion_stock
+      SECRET_KEY: changez-moi-en-production-clef-secrete-tres-longue
+      CORS_ORIGINS: "*"
+      AUTO_CREATE_TABLES: "true"
+      SEED_DEMO: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    restart: on-failure
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  db_data:

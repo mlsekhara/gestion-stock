@@ -1,0 +1,47 @@
+{
+  "app": {
+    "titre": "Gestion de Stock",
+    "chargement": "Chargement…"
+  },
+  "auth": {
+    "connexion": "Connexion",
+    "email": "Adresse e-mail",
+    "motDePasse": "Mot de passe",
+    "seConnecter": "Se connecter",
+    "deconnexion": "Déconnexion",
+    "erreurIdentifiants": "E-mail ou mot de passe incorrect",
+    "compteDemo": "Compte de démonstration",
+    "bienvenue": "Connectez-vous à votre espace de gestion"
+  },
+  "nav": {
+    "tableauDeBord": "Tableau de bord",
+    "stock": "Stock",
+    "articles": "Articles",
+    "mouvements": "Mouvements",
+    "inventaire": "Inventaire",
+    "achats": "Achats",
+    "ventes": "Ventes",
+    "tiers": "Tiers",
+    "clients": "Clients",
+    "fournisseurs": "Fournisseurs",
+    "parametres": "Paramètres"
+  },
+  "commun": {
+    "magasin": "Magasin",
+    "enConstruction": "Module en construction",
+    "enConstructionDetail": "Cette section sera disponible dans une prochaine phase.",
+    "rechercher": "Rechercher",
+    "annuler": "Annuler",
+    "valider": "Valider",
+    "fermer": "Fermer"
+  },
+  "scanner": {
+    "titre": "Scanner un code-barres / IMEI",
+    "demarrer": "Démarrer le scan",
+    "arreter": "Arrêter",
+    "autorisation": "Autorisation caméra requise",
+    "erreurCamera": "Impossible d'accéder à la caméra",
+    "resultat": "Code détecté",
+    "instruction": "Placez le code-barres dans le cadre"
+  }
+}
