@@ -26,6 +26,8 @@ export interface Article {
   taxe_id?: number | null;
   prix_achat_moyen: number;
   prix_vente: number;
+  prix_vente_gros: number;
+  prix_vente_super_gros: number;
   seuil_alerte: number;
   suivi_serie: boolean;
   actif: boolean;

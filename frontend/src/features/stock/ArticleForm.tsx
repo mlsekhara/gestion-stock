@@ -67,7 +67,7 @@ export default function ArticleForm({ open, article, onClose }: Props) {
         form={form}
         layout="vertical"
         onFinish={(v) => mutation.mutate(v)}
-        initialValues={{ prix_vente: 0, prix_achat_moyen: 0, seuil_alerte: 0, suivi_serie: false, actif: true }}
+        initialValues={{ prix_vente: 0, prix_vente_gros: 0, prix_vente_super_gros: 0, prix_achat_moyen: 0, seuil_alerte: 0, suivi_serie: false, actif: true }}
       >
         <Row gutter={12}>
           <Col xs={24} sm={8}>
@@ -117,16 +117,29 @@ export default function ArticleForm({ open, article, onClose }: Props) {
         </Row>
 
         <Row gutter={12}>
-          <Col xs={12} sm={8}>
-            <Form.Item name="prix_achat_moyen" label="Prix d'achat moyen">
+          <Col xs={12} sm={6}>
+            <Form.Item name="prix_achat_moyen" label="Prix d'achat moy.">
               <InputNumber min={0} style={{ width: "100%" }} />
             </Form.Item>
           </Col>
-          <Col xs={12} sm={8}>
-            <Form.Item name="prix_vente" label="Prix de vente">
+          <Col xs={12} sm={6}>
+            <Form.Item name="prix_vente" label="Prix vente (détail)">
               <InputNumber min={0} style={{ width: "100%" }} />
             </Form.Item>
           </Col>
+          <Col xs={12} sm={6}>
+            <Form.Item name="prix_vente_gros" label="Prix vente (gros)">
+              <InputNumber min={0} style={{ width: "100%" }} />
+            </Form.Item>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Form.Item name="prix_vente_super_gros" label="Prix (super gros)">
+              <InputNumber min={0} style={{ width: "100%" }} />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={12}>
           <Col xs={12} sm={8}>
             <Form.Item name="seuil_alerte" label="Seuil d'alerte">
               <InputNumber min={0} style={{ width: "100%" }} />

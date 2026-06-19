@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Card, Form, InputNumber, Input, Modal, Select, Space, Table, Tag, Typography, Popconfirm, App, List } from "antd";
-import { PlusOutlined, DownloadOutlined, DollarOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, DownloadOutlined, DollarOutlined, DeleteOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/api/achats";
 import { useAuthStore } from "@/store/auth";
 import AchatForm from "./AchatForm";
+import { imprimerDocument } from "@/utils/imprimerDocument";
 
 const STATUT: Record<StatutAchat, { txt: string; couleur: string }> = {
   commande: { txt: "Commande", couleur: "gold" },
@@ -95,6 +96,29 @@ export default function AchatsPage() {
     onError: (e: any) => message.error(e?.response?.data?.detail ?? "Erreur"),
   });
 
+  const entreprise = useAuthStore((s) => s.utilisateur?.entreprise);
+
+  function imprimer(a: Achat) {
+    imprimerDocument({
+      type: "bon_achat",
+      reference: a.reference,
+      date: new Date(a.created_at).toLocaleDateString("fr-FR"),
+      entreprise: { nom: entreprise?.nom ?? "", adresse: "Alger, Algérie" },
+      tiers: a.fournisseur_nom ? { label: "Fournisseur", nom: a.fournisseur_nom } : null,
+      lignes: a.lignes.map((l) => ({
+        designation: l.article_designation ?? "—",
+        quantite: Number(l.quantite),
+        prix_unitaire: Number(l.cout_unitaire),
+        montant: Number(l.montant),
+      })),
+      montant_total: Number(a.montant_total),
+      montant_paye: Number(a.montant_paye),
+      reste_a_payer: Number(a.reste_a_payer),
+      devise,
+      note: a.note ?? undefined,
+    });
+  }
+
   const colonnes: ColumnsType<Achat> = [
     { title: "Référence", dataIndex: "reference", width: 110 },
     { title: "Fournisseur", dataIndex: "fournisseur_nom", render: (v) => v ?? "—" },
@@ -111,10 +135,11 @@ export default function AchatsPage() {
     {
       title: "Actions",
       key: "actions",
-      width: 230,
+      width: 280,
       align: "right",
       render: (_, a) => (
-        <Space>
+        <Space wrap>
+          <Button size="small" icon={<PrinterOutlined />} onClick={() => imprimer(a)}>Imprimer</Button>
           {a.statut === "commande" && (
             <Popconfirm title="Réceptionner ? Le stock sera mis à jour." okText="Oui" cancelText="Non" onConfirm={() => reception.mutate(a.id)}>
               <Button size="small" type="primary" icon={<DownloadOutlined />}>Réceptionner</Button>

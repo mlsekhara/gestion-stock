@@ -3,6 +3,7 @@ from app.models.achat import Achat, AchatLigne, PaiementAchat
 from app.models.catalogue import Article, Famille, Marque, Taxe, Unite
 from app.models.entreprise import Entreprise
 from app.models.magasin import Magasin
+from app.models.prime import PrimeConfig
 from app.models.role import Role
 from app.models.stock import (
     Inventaire,
@@ -35,4 +36,5 @@ __all__ = [
     "Vente",
     "VenteLigne",
     "PaiementVente",
+    "PrimeConfig",
 ]

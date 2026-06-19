@@ -78,6 +78,8 @@ class Article(Base, TimestampMixin):
 
     prix_achat_moyen: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
     prix_vente: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
+    prix_vente_gros: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
+    prix_vente_super_gros: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
     seuil_alerte: Mapped[Decimal] = mapped_column(Numeric(14, 3), default=Decimal("0"), nullable=False)
     # Téléphonie : suivi des numéros de série / IMEI (champ optionnel, désactivé en générique)
     suivi_serie: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

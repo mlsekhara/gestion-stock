@@ -22,6 +22,8 @@ PERMISSIONS: dict[str, str] = {
     "tiers:gerer": "Gérer clients et fournisseurs",
     # Tableau de bord
     "tableau_de_bord:lire": "Consulter le tableau de bord",
+    # Primes
+    "primes:lire": "Consulter sa propre prime",
     # Paramétrage
     "parametres:gerer": "Gérer les paramètres, utilisateurs et magasins",
 }
@@ -52,6 +54,7 @@ DEFAULT_ROLES: dict[str, dict] = {
             "stock:lire",
             "ventes:lire", "ventes:gerer",
             "tiers:lire", "tiers:gerer",
+            "primes:lire",
         ],
     },
 }

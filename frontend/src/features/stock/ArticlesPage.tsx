@@ -1,22 +1,73 @@
-import { useMemo, useState } from "react";
-import { Button, Card, Input, Select, Space, Table, Tag, Typography, Popconfirm, App, Tooltip } from "antd";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { Button, Card, Input, InputNumber, Select, Space, Table, Tag, Typography, Popconfirm, App, Tooltip } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
-import { listerArticles, supprimerArticle, refApi, type Article } from "@/api/catalogue";
+import { listerArticles, supprimerArticle, modifierArticle, refApi, type Article } from "@/api/catalogue";
 import { useAuthStore } from "@/store/auth";
 import StockKpis from "./StockKpis";
 import ArticleForm from "./ArticleForm";
 import MouvementModal from "@/components/MouvementModal";
 
 function badgeQuantite(a: Article) {
-  // Les Decimal sont sérialisés en chaînes par l'API → convertir en nombre.
   const q = Number(a.quantite);
   const seuil = Number(a.seuil_alerte);
   const qAffiche = q.toLocaleString("fr-FR");
   if (q <= 0) return <Tag color="error">Rupture (0)</Tag>;
   if (seuil > 0 && q <= seuil) return <Tag color="warning">{`${qAffiche} (alerte)`}</Tag>;
   return <Tag color="success">{qAffiche}</Tag>;
+}
+
+function EditablePrice({ value, articleId, field, onSaved }: {
+  value: number;
+  articleId: number;
+  field: string;
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(value);
+  const inputRef = useRef<any>(null);
+  const { message } = App.useApp();
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  const save = async () => {
+    setEditing(false);
+    if (val === value) return;
+    try {
+      await modifierArticle(articleId, { [field]: val });
+      onSaved();
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail ?? "Erreur");
+    }
+  };
+
+  if (!editing) {
+    return (
+      <div
+        onDoubleClick={() => { setVal(value); setEditing(true); }}
+        style={{ cursor: "pointer", padding: "2px 4px", borderRadius: 4, minHeight: 22 }}
+        title="Double-cliquer pour modifier"
+      >
+        {Number(value).toLocaleString("fr-FR")}
+      </div>
+    );
+  }
+
+  return (
+    <InputNumber
+      ref={inputRef}
+      size="small"
+      min={0}
+      value={val}
+      onChange={(v) => setVal(v ?? 0)}
+      onBlur={save}
+      onPressEnter={save}
+      style={{ width: "100%" }}
+    />
+  );
 }
 
 export default function ArticlesPage() {
@@ -45,9 +96,11 @@ export default function ArticlesPage() {
     onError: (e: any) => message.error(e?.response?.data?.detail ?? "Suppression impossible"),
   });
 
+  const refresh = () => qc.invalidateQueries({ queryKey: ["articles"] });
+
   const colonnes: ColumnsType<Article> = useMemo(
     () => [
-      { title: "Référence", dataIndex: "reference", width: 130 },
+      { title: "Référence", dataIndex: "reference", width: 120 },
       {
         title: "Désignation",
         dataIndex: "designation",
@@ -61,25 +114,39 @@ export default function ArticlesPage() {
           </Space>
         ),
       },
-      { title: "Quantité", dataIndex: "quantite", width: 130, align: "center", render: (_, a) => badgeQuantite(a) },
+      { title: "Qté", dataIndex: "quantite", width: 110, align: "center", render: (_, a) => badgeQuantite(a) },
       {
-        title: `P. vente (${devise})`,
-        dataIndex: "prix_vente",
-        width: 120,
+        title: `Achat moy.`,
+        dataIndex: "prix_achat_moyen",
+        width: 105,
         align: "right",
-        render: (v) => Number(v).toLocaleString("fr-FR"),
+        render: (v, a) => <EditablePrice value={Number(v)} articleId={a.id} field="prix_achat_moyen" onSaved={refresh} />,
       },
       {
-        title: `P. achat moy. (${devise})`,
-        dataIndex: "prix_achat_moyen",
-        width: 140,
+        title: `Détail`,
+        dataIndex: "prix_vente",
+        width: 95,
         align: "right",
-        render: (v) => Number(v).toLocaleString("fr-FR"),
+        render: (v, a) => <EditablePrice value={Number(v)} articleId={a.id} field="prix_vente" onSaved={refresh} />,
+      },
+      {
+        title: `Gros`,
+        dataIndex: "prix_vente_gros",
+        width: 95,
+        align: "right",
+        render: (v, a) => <EditablePrice value={Number(v)} articleId={a.id} field="prix_vente_gros" onSaved={refresh} />,
+      },
+      {
+        title: `Super gros`,
+        dataIndex: "prix_vente_super_gros",
+        width: 100,
+        align: "right",
+        render: (v, a) => <EditablePrice value={Number(v)} articleId={a.id} field="prix_vente_super_gros" onSaved={refresh} />,
       },
       {
         title: "Actions",
         key: "actions",
-        width: 150,
+        width: 140,
         align: "right",
         render: (_, a) => (
           <Space>
@@ -134,13 +201,17 @@ export default function ArticlesPage() {
           </Button>
         </Space>
 
+        <Typography.Text type="secondary" style={{ display: "block", marginBottom: 8, fontSize: 12 }}>
+          Double-cliquer sur un prix pour le modifier directement.
+        </Typography.Text>
+
         <Table
           rowKey="id"
           size="middle"
           loading={isFetching}
           columns={colonnes}
           dataSource={articles}
-          scroll={{ x: 900 }}
+          scroll={{ x: 1050 }}
           pagination={{ pageSize: 12, showSizeChanger: false }}
         />
       </Card>

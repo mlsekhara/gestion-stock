@@ -24,7 +24,11 @@
     "tiers": "Tiers",
     "clients": "Clients",
     "fournisseurs": "Fournisseurs",
-    "parametres": "Paramètres"
+    "primes": "Primes",
+    "maPrime": "Ma prime",
+    "parametres": "Paramètres",
+    "referentiels": "Référentiels",
+    "utilisateurs": "Utilisateurs"
   },
   "commun": {
     "magasin": "Magasin",

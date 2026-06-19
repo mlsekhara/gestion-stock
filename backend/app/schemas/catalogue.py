@@ -57,6 +57,8 @@ class ArticleBase(BaseModel):
     taxe_id: int | None = None
     prix_achat_moyen: Decimal = Field(default=Decimal("0"), ge=0)
     prix_vente: Decimal = Field(default=Decimal("0"), ge=0)
+    prix_vente_gros: Decimal = Field(default=Decimal("0"), ge=0)
+    prix_vente_super_gros: Decimal = Field(default=Decimal("0"), ge=0)
     seuil_alerte: Decimal = Field(default=Decimal("0"), ge=0)
     suivi_serie: bool = False
     actif: bool = True
@@ -77,6 +79,8 @@ class ArticleUpdate(BaseModel):
     taxe_id: int | None = None
     prix_achat_moyen: Decimal | None = Field(default=None, ge=0)
     prix_vente: Decimal | None = Field(default=None, ge=0)
+    prix_vente_gros: Decimal | None = Field(default=None, ge=0)
+    prix_vente_super_gros: Decimal | None = Field(default=None, ge=0)
     seuil_alerte: Decimal | None = Field(default=None, ge=0)
     suivi_serie: bool | None = None
     actif: bool | None = None
@@ -108,6 +112,8 @@ def article_to_out(article, quantite: Decimal) -> ArticleOut:
         taxe_id=article.taxe_id,
         prix_achat_moyen=article.prix_achat_moyen,
         prix_vente=article.prix_vente,
+        prix_vente_gros=article.prix_vente_gros,
+        prix_vente_super_gros=article.prix_vente_super_gros,
         seuil_alerte=article.seuil_alerte,
         suivi_serie=article.suivi_serie,
         actif=article.actif,

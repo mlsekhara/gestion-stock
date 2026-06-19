@@ -6,6 +6,7 @@ import {
   ShoppingCartOutlined,
   ShopOutlined,
   TeamOutlined,
+  TrophyOutlined,
 } from "@ant-design/icons";
 import type { ReactNode } from "react";
 
@@ -46,7 +47,19 @@ export const MODULES: ModuleNav[] = [
       { i18n: "nav.fournisseurs", chemin: "/tiers/fournisseurs" },
     ],
   },
-  { cle: "parametres", i18n: "nav.parametres", chemin: "/parametres", icone: <SettingOutlined />, permission: "parametres:gerer" },
+  { cle: "primes", i18n: "nav.primes", chemin: "/primes", icone: <TrophyOutlined />, permission: "parametres:gerer" },
+  { cle: "ma-prime", i18n: "nav.maPrime", chemin: "/ma-prime", icone: <TrophyOutlined />, permission: "primes:lire" },
+  {
+    cle: "parametres",
+    i18n: "nav.parametres",
+    chemin: "/parametres",
+    icone: <SettingOutlined />,
+    permission: "parametres:gerer",
+    enfants: [
+      { i18n: "nav.referentiels", chemin: "/parametres/referentiels" },
+      { i18n: "nav.utilisateurs", chemin: "/parametres/utilisateurs" },
+    ],
+  },
 ];
 
 export const ICONE_DEFAUT = <AppstoreOutlined />;

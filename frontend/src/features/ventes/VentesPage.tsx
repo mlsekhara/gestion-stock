@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Card, Col, Form, InputNumber, Input, List, Modal, Row, Select, Space, Statistic, Table, Tag, Typography, Popconfirm, App } from "antd";
-import { PlusOutlined, CheckCircleOutlined, DollarOutlined, DeleteOutlined, ShoppingOutlined, RiseOutlined, LineChartOutlined, ShoppingCartOutlined } from "@ant-design/icons";
+import { PlusOutlined, CheckCircleOutlined, DollarOutlined, DeleteOutlined, ShoppingOutlined, RiseOutlined, LineChartOutlined, ShoppingCartOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -15,6 +15,7 @@ import {
 } from "@/api/ventes";
 import { useAuthStore } from "@/store/auth";
 import VenteForm from "./VenteForm";
+import { imprimerDocument } from "@/utils/imprimerDocument";
 
 const fmt = (v: number) => Number(v).toLocaleString("fr-FR");
 
@@ -118,6 +119,29 @@ export default function VentesPage() {
     onError: (e: any) => message.error(e?.response?.data?.detail ?? "Erreur"),
   });
 
+  const entreprise = useAuthStore((s) => s.utilisateur?.entreprise);
+
+  function imprimer(v: Vente, type: "facture" | "proforma" | "bon_livraison") {
+    imprimerDocument({
+      type,
+      reference: v.reference,
+      date: new Date(v.created_at).toLocaleDateString("fr-FR"),
+      entreprise: { nom: entreprise?.nom ?? "", adresse: "Alger, Algérie" },
+      tiers: v.client_nom ? { label: "Client", nom: v.client_nom } : null,
+      lignes: v.lignes.map((l) => ({
+        designation: l.article_designation ?? "—",
+        quantite: Number(l.quantite),
+        prix_unitaire: Number(l.prix_unitaire),
+        montant: Number(l.montant),
+      })),
+      montant_total: Number(v.montant_total),
+      montant_paye: Number(v.montant_paye),
+      reste_a_payer: Number(v.reste_a_payer),
+      devise,
+      note: v.note ?? undefined,
+    });
+  }
+
   const colonnes: ColumnsType<Vente> = [
     { title: "Référence", dataIndex: "reference", width: 110 },
     { title: "Type", dataIndex: "type", width: 110, render: (t: TypeVente) => <Tag color={TYPE_TAG[t].couleur}>{TYPE_TAG[t].txt}</Tag> },
@@ -136,10 +160,16 @@ export default function VentesPage() {
     {
       title: "Actions",
       key: "actions",
-      width: 220,
+      width: 280,
       align: "right",
       render: (_, v) => (
-        <Space>
+        <Space wrap>
+          <Button size="small" icon={<PrinterOutlined />} onClick={() => imprimer(v, v.type === "proforma" ? "proforma" : "facture")}>
+            {v.type === "proforma" ? "Proforma" : "Facture"}
+          </Button>
+          {v.type !== "proforma" && (
+            <Button size="small" icon={<PrinterOutlined />} onClick={() => imprimer(v, "bon_livraison")}>BL</Button>
+          )}
           {v.statut === "brouillon" && (
             <Popconfirm title="Valider ? Le stock sera mis à jour." okText="Oui" cancelText="Non" onConfirm={() => validation.mutate(v.id)}>
               <Button size="small" type="primary" icon={<CheckCircleOutlined />}>Valider</Button>

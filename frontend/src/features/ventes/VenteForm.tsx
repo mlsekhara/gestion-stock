@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, InputNumber, Button, DatePicker, Space, Segmented, Typography, App, Divider } from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listerArticles, type Article } from "@/api/catalogue";
+import { listerArticles, creerArticle, type Article } from "@/api/catalogue";
 import { tiersApi } from "@/api/tiers";
 import { creerVente, type TypeVente } from "@/api/ventes";
+import QuickAddDropdown from "@/components/QuickAddDropdown";
 
 const TYPES = [
   { label: "Facture", value: "facture" },
@@ -34,6 +35,27 @@ export default function VenteForm({ open, onClose }: { open: boolean; onClose: (
     onError: (e: any) => message.error(e?.response?.data?.detail ?? "Erreur"),
   });
 
+  const addClient = useMutation({
+    mutationFn: (nom: string) => tiersApi("clients").creer({ nom }),
+    onSuccess: (created) => {
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      form.setFieldValue("client_id", created.id);
+      message.success("Client ajouté");
+    },
+    onError: (e: any) => message.error(e?.response?.data?.detail ?? "Erreur"),
+  });
+
+  const addArticle = useMutation({
+    mutationFn: (vals: { reference: string; designation: string }) =>
+      creerArticle({ reference: vals.reference, designation: vals.designation, actif: true }),
+    onSuccess: (created) => {
+      qc.invalidateQueries({ queryKey: ["articles"] });
+      message.success("Article ajouté");
+      return created;
+    },
+    onError: (e: any) => message.error(e?.response?.data?.detail ?? "Erreur"),
+  });
+
   function onFinish(v: any) {
     mutation.mutate({
       client_id: v.client_id ?? null,
@@ -48,7 +70,6 @@ export default function VenteForm({ open, onClose }: { open: boolean; onClose: (
     });
   }
 
-  // Pré-remplit le prix de vente quand on choisit un article.
   function onValuesChange(changed: any) {
     if (!changed.lignes) return;
     const lignes = form.getFieldValue("lignes") ?? [];
@@ -93,6 +114,14 @@ export default function VenteForm({ open, onClose }: { open: boolean; onClose: (
               optionFilterProp="label"
               placeholder="Sélectionner"
               options={clients.map((c) => ({ value: c.id, label: c.nom }))}
+              dropdownRender={(menu) => (
+                <QuickAddDropdown
+                  menu={menu}
+                  placeholder="Nouveau client"
+                  loading={addClient.isPending}
+                  onAdd={(nom) => addClient.mutate(nom)}
+                />
+              )}
             />
           </Form.Item>
           <Form.Item name="echeance" label="Échéance">
@@ -108,7 +137,24 @@ export default function VenteForm({ open, onClose }: { open: boolean; onClose: (
               {fields.map(({ key, name, ...rest }) => (
                 <Space key={key} align="baseline" style={{ display: "flex", marginBottom: 4 }}>
                   <Form.Item {...rest} name={[name, "article_id"]} rules={[{ required: true, message: "Article" }]} style={{ minWidth: 320 }}>
-                    <Select showSearch optionFilterProp="label" placeholder="Article" options={articleOptions} />
+                    <Select
+                      showSearch
+                      optionFilterProp="label"
+                      placeholder="Article"
+                      options={articleOptions}
+                      dropdownRender={(menu) => (
+                        <QuickAddArticleDropdown
+                          menu={menu}
+                          loading={addArticle.isPending}
+                          onAdd={async (ref, des) => {
+                            const created = await addArticle.mutateAsync({ reference: ref, designation: des });
+                            const lignes = form.getFieldValue("lignes") ?? [];
+                            lignes[name] = { ...lignes[name], article_id: created.id };
+                            form.setFieldsValue({ lignes });
+                          }}
+                        />
+                      )}
+                    />
                   </Form.Item>
                   <Form.Item {...rest} name={[name, "quantite"]} rules={[{ required: true, message: "Qté" }]}>
                     <InputNumber min={0.001} placeholder="Qté" style={{ width: 90 }} />
@@ -135,5 +181,55 @@ export default function VenteForm({ open, onClose }: { open: boolean; onClose: (
         </Typography.Text>
       </Form>
     </Modal>
+  );
+}
+
+function QuickAddArticleDropdown({
+  menu,
+  loading,
+  onAdd,
+}: {
+  menu: React.ReactElement;
+  loading: boolean;
+  onAdd: (reference: string, designation: string) => void;
+}) {
+  const [ref, setRef] = useState("");
+  const [des, setDes] = useState("");
+
+  return (
+    <>
+      {menu}
+      <Divider style={{ margin: "6px 0" }} />
+      <div style={{ padding: "0 8px 6px", display: "flex", flexDirection: "column", gap: 4 }}>
+        <Input
+          size="small"
+          placeholder="Référence"
+          value={ref}
+          onChange={(e) => setRef(e.target.value)}
+          onKeyDown={(e) => e.stopPropagation()}
+        />
+        <Space.Compact style={{ width: "100%" }}>
+          <Input
+            size="small"
+            placeholder="Désignation"
+            value={des}
+            onChange={(e) => setDes(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+          />
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlusOutlined />}
+            loading={loading}
+            disabled={!ref.trim() || !des.trim()}
+            onClick={() => {
+              onAdd(ref.trim(), des.trim());
+              setRef("");
+              setDes("");
+            }}
+          />
+        </Space.Compact>
+      </div>
+    </>
   );
 }
