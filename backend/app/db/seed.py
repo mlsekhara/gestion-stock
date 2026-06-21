@@ -239,6 +239,7 @@ def init_demo(db: Session) -> None:
                 db, entreprise_id=eid, article=art, magasin_id=mid,
                 type_mouvement="sortie", quantite=D(qty),
                 motif=f"Vente {vente.reference}", cree_par_id=aid,
+                autoriser_negatif=True,
             )
 
         db.flush()
