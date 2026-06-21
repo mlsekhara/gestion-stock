@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     # Dev : créer automatiquement les tables au démarrage et injecter le jeu de démo
     AUTO_CREATE_TABLES: bool = True
     SEED_DEMO: bool = True
+    SEED_RESET: bool = False
 
     @property
     def cors_origins_list(self) -> list[str]:

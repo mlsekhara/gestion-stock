@@ -12,11 +12,14 @@ from app.db.session import SessionLocal, engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # En développement : crée les tables et injecte le jeu de démo au démarrage.
-    if settings.AUTO_CREATE_TABLES:
-        import app.models  # noqa: F401  (enregistre les modèles sur Base.metadata)
+    import app.models  # noqa: F401  (enregistre les modèles sur Base.metadata)
 
+    if settings.SEED_RESET:
+        Base.metadata.drop_all(bind=engine)
+
+    if settings.AUTO_CREATE_TABLES:
         Base.metadata.create_all(bind=engine)
+
     if settings.SEED_DEMO:
         from app.db.seed import init_demo
 

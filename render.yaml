@@ -23,3 +23,5 @@ services:
         value: "true"
       - key: SEED_DEMO
         value: "true"
+      - key: SEED_RESET
+        value: "true"
