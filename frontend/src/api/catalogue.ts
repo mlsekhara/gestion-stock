@@ -67,6 +67,19 @@ export async function supprimerArticle(id: number): Promise<void> {
   await api.delete(`/articles/${id}`);
 }
 
+export interface ImportResult {
+  crees: number;
+  ignores: number;
+  erreurs: string[];
+}
+
+export async function importerArticlesCSV(fichier: File): Promise<ImportResult> {
+  const formData = new FormData();
+  formData.append("fichier", fichier);
+  const { data } = await api.post<ImportResult>("/articles/import", formData);
+  return data;
+}
+
 // --- Référentiels ------------------------------------------------------------
 export const refApi = (ressource: "familles" | "marques" | "unites" | "taxes") => ({
   lister: async () => (await api.get(`/${ressource}`)).data as Ref[],

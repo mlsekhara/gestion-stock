@@ -10,6 +10,9 @@ export interface Tiers {
   rc?: string | null;
   nif?: string | null;
   actif: boolean;
+  total_achats_client?: number;
+  total_achats_fournisseur?: number;
+  reste_a_payer?: number;
 }
 
 export type TiersRessource = "fournisseurs" | "clients";

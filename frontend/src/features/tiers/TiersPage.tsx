@@ -4,6 +4,9 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
 import { tiersApi, type Tiers, type TiersRessource } from "@/api/tiers";
+import { useAuthStore } from "@/store/auth";
+
+const fmt = (v: number) => Number(v).toLocaleString("fr-FR");
 
 export default function TiersPage({ ressource, titre }: { ressource: TiersRessource; titre: string }) {
   const qc = useQueryClient();
@@ -12,6 +15,7 @@ export default function TiersPage({ ressource, titre }: { ressource: TiersRessou
   const [open, setOpen] = useState(false);
   const [edite, setEdite] = useState<Tiers | null>(null);
   const apiRes = tiersApi(ressource);
+  const devise = useAuthStore((s) => s.utilisateur?.entreprise.devise ?? "DA");
 
   const { data = [], isFetching } = useQuery({ queryKey: [ressource], queryFn: () => apiRes.lister() });
 
@@ -41,10 +45,29 @@ export default function TiersPage({ ressource, titre }: { ressource: TiersRessou
     onError: (e: any) => message.error(e?.response?.data?.detail ?? "Suppression impossible"),
   });
 
+  const isClient = ressource === "clients";
+
   const colonnes: ColumnsType<Tiers> = [
     { title: "Nom", dataIndex: "nom" },
     { title: "Téléphone", dataIndex: "telephone", render: (v) => v ?? "—" },
-    { title: "Adresse", dataIndex: "adresse", render: (v) => v ?? "—" },
+    { title: "Adresse", dataIndex: "adresse", render: (v) => v ?? "—", responsive: ["md"] },
+    {
+      title: isClient ? `CA (${devise})` : `Achats (${devise})`,
+      key: "total",
+      width: 130,
+      align: "right",
+      render: (_, r) => fmt(isClient ? (r.total_achats_client ?? 0) : (r.total_achats_fournisseur ?? 0)),
+    },
+    {
+      title: `Crédit (${devise})`,
+      key: "credit",
+      width: 130,
+      align: "right",
+      render: (_, r) => {
+        const val = r.reste_a_payer ?? 0;
+        return <span style={{ color: val > 0 ? "#ff4d4f" : "#52c41a", fontWeight: val > 0 ? 600 : 400 }}>{fmt(val)}</span>;
+      },
+    },
     { title: "Actif", dataIndex: "actif", width: 80, align: "center", render: (v) => (v ? <Tag color="success">Oui</Tag> : <Tag>Non</Tag>) },
     {
       title: "Actions",
@@ -62,17 +85,26 @@ export default function TiersPage({ ressource, titre }: { ressource: TiersRessou
     },
   ];
 
+  const totalCredit = data.reduce((sum, t) => sum + (t.reste_a_payer ?? 0), 0);
+
   return (
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>{titre}</Typography.Title>
+        <div>
+          <Typography.Title level={3} style={{ margin: 0 }}>{titre}</Typography.Title>
+          {totalCredit > 0 && (
+            <Typography.Text type="danger" strong>
+              Total crédit : {fmt(totalCredit)} {devise}
+            </Typography.Text>
+          )}
+        </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEdite(null); setOpen(true); }}>
           Ajouter
         </Button>
       </div>
 
       <Card variant="borderless">
-        <Table rowKey="id" loading={isFetching} columns={colonnes} dataSource={data} pagination={{ pageSize: 12 }} />
+        <Table rowKey="id" loading={isFetching} columns={colonnes} dataSource={data} pagination={{ pageSize: 12 }} scroll={{ x: 800 }} />
       </Card>
 
       <Modal

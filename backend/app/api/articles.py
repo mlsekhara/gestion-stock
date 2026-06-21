@@ -1,7 +1,9 @@
-"""Routeur Articles : CRUD, recherche, recherche par code-barres."""
-from decimal import Decimal
+"""Routeur Articles : CRUD, recherche, recherche par code-barres, import CSV."""
+import csv
+import io
+from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -98,6 +100,15 @@ def detail(
     return article_to_out(article, q or Decimal("0"))
 
 
+def _generer_reference(db: Session, entreprise_id: int) -> str:
+    from sqlalchemy import func as sqf
+    dernier = db.scalar(
+        select(sqf.max(Article.id)).where(Article.entreprise_id == entreprise_id)
+    )
+    num = (dernier or 0) + 1
+    return f"ART-{num:05d}"
+
+
 @router.post("", response_model=ArticleOut, status_code=status.HTTP_201_CREATED)
 def creer(
     payload: ArticleCreate,
@@ -105,6 +116,8 @@ def creer(
     u: Utilisateur = Depends(GERER),
 ):
     data = payload.model_dump()
+    if not data.get("reference"):
+        data["reference"] = _generer_reference(db, u.entreprise_id)
     _valider_fk(db, u.entreprise_id, data)
     article = Article(entreprise_id=u.entreprise_id, **data)
     db.add(article)
@@ -149,3 +162,89 @@ def supprimer(article_id: int, db: Session = Depends(get_db), u: Utilisateur = D
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Introuvable")
     db.delete(article)
     db.commit()
+
+
+@router.post("/import", summary="Importer des articles depuis un fichier CSV")
+async def importer_csv(
+    fichier: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    u: Utilisateur = Depends(GERER),
+):
+    if not fichier.filename or not fichier.filename.lower().endswith(".csv"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Fichier CSV attendu")
+
+    contenu = await fichier.read()
+    try:
+        texte = contenu.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        texte = contenu.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(texte), delimiter=";")
+    if not reader.fieldnames:
+        reader = csv.DictReader(io.StringIO(texte), delimiter=",")
+
+    familles = {f.nom.lower(): f.id for f in db.scalars(select(Famille).where(Famille.entreprise_id == u.entreprise_id))}
+    marques = {m.nom.lower(): m.id for m in db.scalars(select(Marque).where(Marque.entreprise_id == u.entreprise_id))}
+    unite = db.scalar(select(Unite).where(Unite.entreprise_id == u.entreprise_id))
+    unite_id = unite.id if unite else None
+
+    crees = 0
+    ignores = 0
+    erreurs: list[str] = []
+
+    for i, row in enumerate(reader, start=2):
+        ref = (row.get("reference") or row.get("Réf") or row.get("ref") or "").strip()
+        designation = (row.get("designation") or row.get("Désignation") or row.get("désignation") or "").strip()
+        if not designation:
+            erreurs.append(f"Ligne {i}: désignation manquante")
+            continue
+
+        if not ref:
+            ref = designation[:20].upper().replace(" ", "-")
+
+        exists = db.scalar(
+            select(Article).where(Article.entreprise_id == u.entreprise_id, Article.reference == ref)
+        )
+        if exists:
+            ignores += 1
+            continue
+
+        famille_nom = (row.get("famille") or row.get("Famille") or "").strip().lower()
+        marque_nom = (row.get("marque") or row.get("Marque") or "").strip().lower()
+        famille_id = familles.get(famille_nom)
+        marque_id = marques.get(marque_nom)
+
+        try:
+            prix_vente = Decimal(str(row.get("prix_vente") or row.get("Prix vente") or row.get("prix vente") or "0").replace(",", ".").replace(" ", ""))
+        except (InvalidOperation, ValueError):
+            prix_vente = Decimal("0")
+
+        try:
+            seuil = Decimal(str(row.get("seuil_alerte") or row.get("Seuil alerte") or row.get("seuil") or "0").replace(",", ".").replace(" ", ""))
+        except (InvalidOperation, ValueError):
+            seuil = Decimal("0")
+
+        code_barres = (row.get("code_barres") or row.get("Code-barres") or row.get("code barres") or "").strip() or None
+
+        article = Article(
+            entreprise_id=u.entreprise_id,
+            reference=ref,
+            designation=designation,
+            famille_id=famille_id,
+            marque_id=marque_id,
+            unite_id=unite_id,
+            prix_vente=prix_vente,
+            seuil_alerte=seuil,
+            code_barres=code_barres,
+            prix_achat_moyen=Decimal("0"),
+        )
+        db.add(article)
+        crees += 1
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Conflit de référence lors de l'import")
+
+    return {"crees": crees, "ignores": ignores, "erreurs": erreurs}

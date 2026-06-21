@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Card, Form, InputNumber, Input, Modal, Select, Space, Table, Tag, Typography, Popconfirm, App, List } from "antd";
-import { PlusOutlined, DownloadOutlined, DollarOutlined, DeleteOutlined, PrinterOutlined } from "@ant-design/icons";
+import { PlusOutlined, DownloadOutlined, DollarOutlined, DeleteOutlined, PrinterOutlined, ExportOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -14,6 +14,7 @@ import {
 import { useAuthStore } from "@/store/auth";
 import AchatForm from "./AchatForm";
 import { imprimerDocument } from "@/utils/imprimerDocument";
+import { exporterCSV } from "@/utils/exportExcel";
 
 const STATUT: Record<StatutAchat, { txt: string; couleur: string }> = {
   commande: { txt: "Commande", couleur: "gold" },
@@ -162,9 +163,16 @@ export default function AchatsPage() {
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <Typography.Title level={3} style={{ margin: 0 }}>Achats</Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
-          Nouveau bon d'achat
-        </Button>
+        <Space>
+          <Button icon={<ExportOutlined />} onClick={() => {
+            exporterCSV("achats", ["Référence", "Fournisseur", "Date", "Statut", "Total", "Payé", "Reste"],
+              achats.map((a) => [a.reference, a.fournisseur_nom ?? "", new Date(a.created_at).toLocaleDateString("fr-FR"), a.statut, Number(a.montant_total), Number(a.montant_paye), Number(a.reste_a_payer)])
+            );
+          }}>Export CSV</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
+            Nouveau bon d'achat
+          </Button>
+        </Space>
       </div>
 
       <Card variant="borderless">

@@ -1,13 +1,14 @@
 import { useMemo, useState, useRef, useEffect } from "react";
-import { Button, Card, Input, InputNumber, Select, Space, Table, Tag, Typography, Popconfirm, App, Tooltip } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Button, Card, Input, InputNumber, Select, Space, Table, Tag, Typography, Popconfirm, App, Tooltip, Upload } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined, ReloadOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
-import { listerArticles, supprimerArticle, modifierArticle, refApi, type Article } from "@/api/catalogue";
+import { listerArticles, supprimerArticle, modifierArticle, importerArticlesCSV, refApi, type Article } from "@/api/catalogue";
 import { useAuthStore } from "@/store/auth";
 import StockKpis from "./StockKpis";
 import ArticleForm from "./ArticleForm";
 import MouvementModal from "@/components/MouvementModal";
+import { exporterCSV } from "@/utils/exportExcel";
 
 function badgeQuantite(a: Article) {
   const q = Number(a.quantite);
@@ -172,9 +173,30 @@ export default function ArticlesPage() {
         <Typography.Title level={3} style={{ margin: 0 }}>
           Liste des produits
         </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEdite(null); setFormOpen(true); }}>
-          Nouvel article
-        </Button>
+        <Space>
+          <Upload
+            accept=".csv"
+            showUploadList={false}
+            beforeUpload={(file) => {
+              importerArticlesCSV(file).then((res) => {
+                message.success(`Import terminé : ${res.crees} créés, ${res.ignores} ignorés`);
+                if (res.erreurs.length) message.warning(res.erreurs.join(", "));
+                qc.invalidateQueries({ queryKey: ["articles"] });
+              }).catch((e: any) => message.error(e?.response?.data?.detail ?? "Erreur import"));
+              return false;
+            }}
+          >
+            <Button icon={<UploadOutlined />}>Import CSV</Button>
+          </Upload>
+          <Button icon={<DownloadOutlined />} onClick={() => {
+            exporterCSV("articles", ["Réf", "Désignation", "Famille", "Marque", "Qté", "Prix achat", "Prix vente", "Seuil alerte"],
+              articles.map((a) => [a.reference, a.designation, a.famille_nom ?? "", a.marque_nom ?? "", Number(a.quantite), Number(a.prix_achat_moyen), Number(a.prix_vente), Number(a.seuil_alerte)])
+            );
+          }}>Export CSV</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEdite(null); setFormOpen(true); }}>
+            Nouvel article
+          </Button>
+        </Space>
       </div>
 
       <StockKpis />

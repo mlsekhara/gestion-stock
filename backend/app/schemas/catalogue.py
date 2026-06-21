@@ -47,7 +47,7 @@ class TaxeOut(RefOut):
 
 # --- Articles ----------------------------------------------------------------
 class ArticleBase(BaseModel):
-    reference: str = Field(min_length=1, max_length=80)
+    reference: str | None = Field(default=None, max_length=80)
     code_barres: str | None = Field(default=None, max_length=80)
     designation: str = Field(min_length=1, max_length=255)
     description: str | None = None

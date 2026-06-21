@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Card, Col, Form, InputNumber, Input, List, Modal, Row, Select, Space, Statistic, Table, Tag, Typography, Popconfirm, App } from "antd";
-import { PlusOutlined, CheckCircleOutlined, DollarOutlined, DeleteOutlined, ShoppingOutlined, RiseOutlined, LineChartOutlined, ShoppingCartOutlined, PrinterOutlined } from "@ant-design/icons";
+import { PlusOutlined, CheckCircleOutlined, DollarOutlined, DeleteOutlined, ShoppingOutlined, RiseOutlined, LineChartOutlined, ShoppingCartOutlined, PrinterOutlined, DownloadOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from "@/store/auth";
 import VenteForm from "./VenteForm";
 import { imprimerDocument } from "@/utils/imprimerDocument";
+import { exporterCSV } from "@/utils/exportExcel";
 
 const fmt = (v: number) => Number(v).toLocaleString("fr-FR");
 
@@ -194,9 +195,16 @@ export default function VentesPage() {
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <Typography.Title level={3} style={{ margin: 0 }}>Ventes</Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
-          Nouvelle vente
-        </Button>
+        <Space>
+          <Button icon={<DownloadOutlined />} onClick={() => {
+            exporterCSV("ventes", ["Référence", "Type", "Client", "Date", "Statut", "Total", "Payé", "Reste"],
+              ventes.map((v) => [v.reference, v.type, v.client_nom ?? "", new Date(v.created_at).toLocaleDateString("fr-FR"), v.statut, Number(v.montant_total), Number(v.montant_paye), Number(v.reste_a_payer)])
+            );
+          }}>Export CSV</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
+            Nouvelle vente
+          </Button>
+        </Space>
       </div>
 
       <VentesKpis />

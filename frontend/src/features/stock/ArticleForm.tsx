@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Modal, Form, Input, InputNumber, Select, Switch, Row, Col, Button, App, Space } from "antd";
+import { Modal, Form, Input, InputNumber, Select, Switch, Row, Col, Button, App, Space, Typography } from "antd";
 import { BarcodeOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -33,13 +33,20 @@ export default function ArticleForm({ open, article, onClose }: Props) {
   useEffect(() => {
     if (open) {
       form.resetFields();
-      if (article) form.setFieldsValue(article);
+      if (article) {
+        const pa = Number(article.prix_achat_moyen) || 0;
+        const pv = Number(article.prix_vente) || 0;
+        const marge = pa > 0 ? Math.round(((pv - pa) / pa) * 100) : 0;
+        form.setFieldsValue({ ...article, marge_pourcent: marge });
+      }
     }
   }, [open, article, form]);
 
   const mutation = useMutation({
-    mutationFn: (values: Record<string, unknown>) =>
-      article ? modifierArticle(article.id, values) : creerArticle(values),
+    mutationFn: (values: Record<string, unknown>) => {
+      const { marge_pourcent, ...data } = values;
+      return article ? modifierArticle(article.id, data) : creerArticle(data);
+    },
     onSuccess: () => {
       message.success(article ? "Article modifié" : "Article créé");
       qc.invalidateQueries({ queryKey: ["articles"] });
@@ -50,6 +57,22 @@ export default function ArticleForm({ open, article, onClose }: Props) {
   });
 
   const opt = (items: Ref[]) => items.map((i) => ({ value: i.id, label: i.nom }));
+
+  const recalculerPrixVente = () => {
+    const pa = Number(form.getFieldValue("prix_achat_moyen")) || 0;
+    const marge = Number(form.getFieldValue("marge_pourcent")) || 0;
+    if (pa > 0 && marge > 0) {
+      form.setFieldValue("prix_vente", Math.round(pa * (1 + marge / 100)));
+    }
+  };
+
+  const recalculerMarge = () => {
+    const pa = Number(form.getFieldValue("prix_achat_moyen")) || 0;
+    const pv = Number(form.getFieldValue("prix_vente")) || 0;
+    if (pa > 0 && pv > 0) {
+      form.setFieldValue("marge_pourcent", Math.round(((pv - pa) / pa) * 100));
+    }
+  };
 
   return (
     <Modal
@@ -67,12 +90,12 @@ export default function ArticleForm({ open, article, onClose }: Props) {
         form={form}
         layout="vertical"
         onFinish={(v) => mutation.mutate(v)}
-        initialValues={{ prix_vente: 0, prix_vente_gros: 0, prix_vente_super_gros: 0, prix_achat_moyen: 0, seuil_alerte: 0, suivi_serie: false, actif: true }}
+        initialValues={{ prix_vente: 0, prix_vente_gros: 0, prix_vente_super_gros: 0, prix_achat_moyen: 0, seuil_alerte: 0, suivi_serie: false, actif: true, marge_pourcent: 0 }}
       >
         <Row gutter={12}>
           <Col xs={24} sm={8}>
-            <Form.Item name="reference" label="Référence" rules={[{ required: true }]}>
-              <Input placeholder="ECR-IP11" />
+            <Form.Item name="reference" label="Référence" tooltip="Laissez vide pour auto-générer">
+              <Input placeholder="Auto" />
             </Form.Item>
           </Col>
           <Col xs={24} sm={16}>
@@ -116,24 +139,32 @@ export default function ArticleForm({ open, article, onClose }: Props) {
           </Col>
         </Row>
 
+        <Typography.Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
+          Prix & marge
+        </Typography.Text>
         <Row gutter={12}>
           <Col xs={12} sm={6}>
-            <Form.Item name="prix_achat_moyen" label="Prix d'achat moy.">
-              <InputNumber min={0} style={{ width: "100%" }} />
+            <Form.Item name="prix_achat_moyen" label="Prix d'achat">
+              <InputNumber min={0} style={{ width: "100%" }} onChange={() => recalculerPrixVente()} />
             </Form.Item>
           </Col>
-          <Col xs={12} sm={6}>
+          <Col xs={12} sm={4}>
+            <Form.Item name="marge_pourcent" label="Marge %">
+              <InputNumber min={0} style={{ width: "100%" }} addonAfter="%" onChange={() => recalculerPrixVente()} />
+            </Form.Item>
+          </Col>
+          <Col xs={12} sm={5}>
             <Form.Item name="prix_vente" label="Prix vente (détail)">
+              <InputNumber min={0} style={{ width: "100%" }} onChange={() => recalculerMarge()} />
+            </Form.Item>
+          </Col>
+          <Col xs={12} sm={5}>
+            <Form.Item name="prix_vente_gros" label="Prix (gros)">
               <InputNumber min={0} style={{ width: "100%" }} />
             </Form.Item>
           </Col>
-          <Col xs={12} sm={6}>
-            <Form.Item name="prix_vente_gros" label="Prix vente (gros)">
-              <InputNumber min={0} style={{ width: "100%" }} />
-            </Form.Item>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Form.Item name="prix_vente_super_gros" label="Prix (super gros)">
+          <Col xs={12} sm={4}>
+            <Form.Item name="prix_vente_super_gros" label="Super gros">
               <InputNumber min={0} style={{ width: "100%" }} />
             </Form.Item>
           </Col>
