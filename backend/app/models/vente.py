@@ -57,6 +57,10 @@ class Vente(Base, TimestampMixin):
         return sum((p.montant for p in self.paiements), Decimal("0"))
 
     @property
+    def reste_a_payer(self) -> Decimal:
+        return self.montant_total - self.montant_paye
+
+    @property
     def marge_totale(self) -> Decimal:
         # Marge connue seulement après validation (coût figé sur chaque ligne)
         return sum(

@@ -48,6 +48,10 @@ class Achat(Base, TimestampMixin):
     def montant_paye(self) -> Decimal:
         return sum((p.montant for p in self.paiements), Decimal("0"))
 
+    @property
+    def reste_a_payer(self) -> Decimal:
+        return self.montant_total - self.montant_paye
+
 
 class AchatLigne(Base):
     __tablename__ = "achat_lignes"
