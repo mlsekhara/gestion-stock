@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Button, Card, DatePicker, Space, Table, Tag, Typography, App } from "antd";
+import { Button, Card, DatePicker, Space, Table, Tag, Typography } from "antd";
 import { PrinterOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
@@ -84,7 +84,7 @@ export default function RelevePage() {
     if (!data || !entreprise) return;
     imprimerReleve(
       data,
-      { nom: entreprise.nom, adresse: entreprise.adresse, telephone: entreprise.telephone },
+      { nom: entreprise.nom, adresse: entreprise.adresse ?? undefined, telephone: entreprise.telephone ?? undefined },
       devise,
     );
   };
