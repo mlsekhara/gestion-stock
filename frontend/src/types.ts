@@ -9,6 +9,8 @@ export interface EntrepriseResume {
   nom: string;
   secteur: string;
   devise: string;
+  adresse?: string | null;
+  telephone?: string | null;
 }
 
 export interface UtilisateurCourant {

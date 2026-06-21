@@ -25,6 +25,8 @@ class EntrepriseResume(BaseModel):
     nom: str
     secteur: str
     devise: str
+    adresse: str | None = None
+    telephone: str | None = None
 
     model_config = {"from_attributes": True}
 

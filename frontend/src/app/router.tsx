@@ -11,6 +11,7 @@ import AchatsPage from "@/features/achats/AchatsPage";
 import FournisseursPage from "@/features/tiers/FournisseursPage";
 import VentesPage from "@/features/ventes/VentesPage";
 import ClientsPage from "@/features/tiers/ClientsPage";
+import RelevePage from "@/features/tiers/RelevePage";
 import BrandGuidePage from "@/features/marque/BrandGuidePage";
 import PrimesAdminPage from "@/features/primes/PrimesAdminPage";
 import MaPrimePage from "@/features/primes/MaPrimePage";
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { path: "ventes", element: <VentesPage /> },
       { path: "tiers", element: <Navigate to="/tiers/fournisseurs" replace /> },
       { path: "tiers/clients", element: <ClientsPage /> },
+      { path: "tiers/clients/:clientId/releve", element: <RelevePage /> },
       { path: "tiers/fournisseurs", element: <FournisseursPage /> },
       { path: "parametres", element: <Navigate to="/parametres/referentiels" replace /> },
       { path: "parametres/referentiels", element: <ReferentielsPage /> },

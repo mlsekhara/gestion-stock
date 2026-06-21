@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button, Card, Form, Input, Modal, Space, Switch, Table, Tag, Typography, Popconfirm, App } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, FileTextOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
 import { tiersApi, type Tiers, type TiersRessource } from "@/api/tiers";
@@ -72,10 +73,15 @@ export default function TiersPage({ ressource, titre }: { ressource: TiersRessou
     {
       title: "Actions",
       key: "actions",
-      width: 110,
+      width: isClient ? 150 : 110,
       align: "right",
       render: (_, r) => (
         <Space>
+          {isClient && (
+            <Link to={`/tiers/clients/${r.id}/releve`}>
+              <Button size="small" icon={<FileTextOutlined />} title="Relevé de compte" />
+            </Link>
+          )}
           <Button size="small" icon={<EditOutlined />} onClick={() => { setEdite(r); setOpen(true); }} />
           <Popconfirm title="Supprimer ?" okText="Oui" cancelText="Non" onConfirm={() => suppression.mutate(r.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />

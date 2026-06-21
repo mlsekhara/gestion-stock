@@ -1,4 +1,5 @@
 """Routeurs Tiers : fournisseurs et clients (même modèle, `type` distinct)."""
+from datetime import date, datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -10,7 +11,7 @@ from app.db.session import get_db
 from app.models.achat import Achat, ACH_RECUE
 from app.models.tiers import TIERS_CLIENT, TIERS_FOURNISSEUR, Tiers
 from app.models.utilisateur import Utilisateur
-from app.models.vente import Vente, VTE_FACTURE, VEN_VALIDEE
+from app.models.vente import Vente, VenteLigne, PaiementVente, VTE_FACTURE, VEN_VALIDEE
 from app.schemas.tiers import TiersCreate, TiersOut, TiersUpdate
 
 LIRE = exiger_permission("tiers:lire")
@@ -84,3 +85,77 @@ def _make_router(type_tiers: str, prefix: str, tag: str) -> APIRouter:
 
 fournisseurs_router = _make_router(TIERS_FOURNISSEUR, "/fournisseurs", "Fournisseurs")
 clients_router = _make_router(TIERS_CLIENT, "/clients", "Clients")
+
+# --- Relevé de compte client ---
+
+releve_router = APIRouter(prefix="/clients", tags=["Clients"])
+LIRE_RELEVE = exiger_permission("ventes:lire")
+
+
+@releve_router.get("/{client_id}/releve")
+def releve_compte(
+    client_id: int,
+    date_debut: date | None = Query(default=None),
+    date_fin: date | None = Query(default=None),
+    db: Session = Depends(get_db),
+    u: Utilisateur = Depends(LIRE_RELEVE),
+):
+    client = db.get(Tiers, client_id)
+    if client is None or client.entreprise_id != u.entreprise_id or client.type != TIERS_CLIENT:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Client introuvable")
+
+    stmt = select(Vente).where(
+        Vente.client_id == client_id,
+        Vente.entreprise_id == u.entreprise_id,
+        Vente.type == VTE_FACTURE,
+        Vente.statut == VEN_VALIDEE,
+    )
+    if date_debut:
+        stmt = stmt.where(Vente.date_validation >= datetime.combine(date_debut, datetime.min.time()))
+    if date_fin:
+        stmt = stmt.where(Vente.date_validation <= datetime.combine(date_fin, datetime.max.time()))
+
+    ventes = db.scalars(stmt.order_by(Vente.date_validation.asc())).all()
+
+    entries = []
+    solde = Decimal("0")
+
+    for v in ventes:
+        for l in v.lignes:
+            montant = l.quantite * l.prix_unitaire
+            solde += montant
+            entries.append({
+                "date": v.date_validation.strftime("%d/%m/%Y") if v.date_validation else "",
+                "type": "vente",
+                "reference": v.reference,
+                "designation": l.article.designation if l.article else "—",
+                "quantite": float(l.quantite),
+                "prix_unitaire": float(l.prix_unitaire),
+                "debit": float(montant),
+                "credit": 0.0,
+                "solde": float(solde),
+            })
+
+        for p in v.paiements:
+            solde -= p.montant
+            entries.append({
+                "date": p.created_at.strftime("%d/%m/%Y") if p.created_at else "",
+                "type": "paiement",
+                "reference": v.reference,
+                "designation": f"Paiement ({p.methode})",
+                "quantite": None,
+                "prix_unitaire": None,
+                "debit": 0.0,
+                "credit": float(p.montant),
+                "solde": float(solde),
+            })
+
+    return {
+        "client": {"id": client.id, "nom": client.nom, "telephone": client.telephone, "adresse": client.adresse},
+        "date_debut": date_debut.isoformat() if date_debut else None,
+        "date_fin": date_fin.isoformat() if date_fin else None,
+        "entries": entries,
+        "total_debit": float(sum(e["debit"] for e in entries)),
+        "total_credit": float(sum(e["credit"] for e in entries)),
+        "solde_final": float(solde),
+    }
