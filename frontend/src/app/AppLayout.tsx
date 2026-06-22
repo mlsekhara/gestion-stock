@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { Layout, Menu, Select, Dropdown, Avatar, Typography, Grid, Button, theme } from "antd";
-import { LogoutOutlined, MenuOutlined, UserOutlined } from "@ant-design/icons";
+import { LogoutOutlined, MenuOutlined, UserOutlined, ZoomInOutlined, ZoomOutOutlined } from "@ant-design/icons";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/store/auth";
+import { useZoomStore } from "@/store/zoom";
 import { MODULES } from "./navigation";
 import { brand } from "./theme";
 import AdBadge from "@/components/AdBadge";
+import OfflineBanner from "@/components/OfflineBanner";
 
 const { Header, Sider, Content } = Layout;
 const { useBreakpoint } = Grid;
@@ -23,6 +25,7 @@ export default function AppLayout() {
   const screens = useBreakpoint();
   const { token } = theme.useToken();
   const { utilisateur, magasinCourantId, setMagasinCourant, deconnexion } = useAuthStore();
+  const { level: zoom, zoomIn, zoomOut } = useZoomStore();
   const [collapsed, setCollapsed] = useState(false);
 
   const estMobile = !screens.lg;
@@ -126,6 +129,12 @@ export default function AppLayout() {
             {utilisateur?.entreprise.nom}
           </Typography.Text>
 
+          <Space.Compact size="small">
+            <Button icon={<ZoomOutOutlined />} onClick={zoomOut} disabled={zoom <= 60} />
+            <Button onClick={() => useZoomStore.getState().reset()} style={{ minWidth: 42, fontSize: 11 }}>{zoom}%</Button>
+            <Button icon={<ZoomInOutlined />} onClick={zoomIn} disabled={zoom >= 150} />
+          </Space.Compact>
+
           <Select
             value={magasinCourantId ?? undefined}
             onChange={setMagasinCourant}
@@ -148,7 +157,8 @@ export default function AppLayout() {
           </Dropdown>
         </Header>
 
-        <Content style={{ margin: 16 }}>
+        <OfflineBanner />
+        <Content style={{ margin: 16, zoom: `${zoom}%` }}>
           <Outlet />
         </Content>
       </Layout>

@@ -12,6 +12,7 @@ from app.models.achat import Achat, ACH_RECUE
 from app.models.tiers import TIERS_CLIENT, TIERS_FOURNISSEUR, Tiers
 from app.models.utilisateur import Utilisateur
 from app.models.vente import Vente, VenteLigne, PaiementVente, VTE_FACTURE, VEN_VALIDEE
+from app.models.achat import AchatLigne, PaiementAchat
 from app.schemas.tiers import TiersCreate, TiersOut, TiersUpdate
 
 LIRE = exiger_permission("tiers:lire")
@@ -152,6 +153,80 @@ def releve_compte(
 
     return {
         "client": {"id": client.id, "nom": client.nom, "telephone": client.telephone, "adresse": client.adresse},
+        "date_debut": date_debut.isoformat() if date_debut else None,
+        "date_fin": date_fin.isoformat() if date_fin else None,
+        "entries": entries,
+        "total_debit": float(sum(e["debit"] for e in entries)),
+        "total_credit": float(sum(e["credit"] for e in entries)),
+        "solde_final": float(solde),
+    }
+
+
+# --- Relevé de compte fournisseur ---
+
+releve_fournisseur_router = APIRouter(prefix="/fournisseurs", tags=["Fournisseurs"])
+LIRE_RELEVE_F = exiger_permission("achats:lire")
+
+
+@releve_fournisseur_router.get("/{fournisseur_id}/releve")
+def releve_fournisseur(
+    fournisseur_id: int,
+    date_debut: date | None = Query(default=None),
+    date_fin: date | None = Query(default=None),
+    db: Session = Depends(get_db),
+    u: Utilisateur = Depends(LIRE_RELEVE_F),
+):
+    four = db.get(Tiers, fournisseur_id)
+    if four is None or four.entreprise_id != u.entreprise_id or four.type != TIERS_FOURNISSEUR:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Fournisseur introuvable")
+
+    stmt = select(Achat).where(
+        Achat.fournisseur_id == fournisseur_id,
+        Achat.entreprise_id == u.entreprise_id,
+        Achat.statut == ACH_RECUE,
+    )
+    if date_debut:
+        stmt = stmt.where(Achat.date_reception >= datetime.combine(date_debut, datetime.min.time()))
+    if date_fin:
+        stmt = stmt.where(Achat.date_reception <= datetime.combine(date_fin, datetime.max.time()))
+
+    achats = db.scalars(stmt.order_by(Achat.date_reception.asc())).all()
+
+    entries = []
+    solde = Decimal("0")
+
+    for a in achats:
+        for l in a.lignes:
+            montant = l.quantite * l.cout_unitaire
+            solde += montant
+            entries.append({
+                "date": a.date_reception.strftime("%d/%m/%Y") if a.date_reception else "",
+                "type": "achat",
+                "reference": a.reference,
+                "designation": l.article.designation if l.article else "—",
+                "quantite": float(l.quantite),
+                "prix_unitaire": float(l.cout_unitaire),
+                "debit": float(montant),
+                "credit": 0.0,
+                "solde": float(solde),
+            })
+
+        for p in a.paiements:
+            solde -= p.montant
+            entries.append({
+                "date": p.created_at.strftime("%d/%m/%Y") if p.created_at else "",
+                "type": "paiement",
+                "reference": a.reference,
+                "designation": f"Paiement ({p.methode})",
+                "quantite": None,
+                "prix_unitaire": None,
+                "debit": 0.0,
+                "credit": float(p.montant),
+                "solde": float(solde),
+            })
+
+    return {
+        "fournisseur": {"id": four.id, "nom": four.nom, "telephone": four.telephone, "adresse": four.adresse},
         "date_debut": date_debut.isoformat() if date_debut else None,
         "date_fin": date_fin.isoformat() if date_fin else None,
         "entries": entries,

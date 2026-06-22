@@ -29,6 +29,16 @@ export interface ReleveData {
   solde_final: number;
 }
 
+export interface ReleveFournisseurData {
+  fournisseur: ReleveClient;
+  date_debut: string | null;
+  date_fin: string | null;
+  entries: ReleveEntry[];
+  total_debit: number;
+  total_credit: number;
+  solde_final: number;
+}
+
 export async function getReleve(
   clientId: number,
   dateDebut?: string,
@@ -38,5 +48,17 @@ export async function getReleve(
   if (dateDebut) params.date_debut = dateDebut;
   if (dateFin) params.date_fin = dateFin;
   const { data } = await api.get<ReleveData>(`/clients/${clientId}/releve`, { params });
+  return data;
+}
+
+export async function getReleveFournisseur(
+  fournisseurId: number,
+  dateDebut?: string,
+  dateFin?: string,
+): Promise<ReleveFournisseurData> {
+  const params: Record<string, string> = {};
+  if (dateDebut) params.date_debut = dateDebut;
+  if (dateFin) params.date_fin = dateFin;
+  const { data } = await api.get<ReleveFournisseurData>(`/fournisseurs/${fournisseurId}/releve`, { params });
   return data;
 }

@@ -1,6 +1,10 @@
 import type { ReleveData } from "@/api/releve";
 
-export function imprimerReleve(data: ReleveData, entreprise: { nom: string; adresse?: string; telephone?: string }, devise = "DA") {
+interface ReleveGeneric extends Omit<ReleveData, "client"> {
+  client: { id: number; nom: string; telephone?: string | null; adresse?: string | null };
+}
+
+export function imprimerReleve(data: ReleveGeneric, entreprise: { nom: string; adresse?: string; telephone?: string }, devise = "DA") {
   const fmt = (n: number) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const today = new Date().toLocaleDateString("fr-FR");
 

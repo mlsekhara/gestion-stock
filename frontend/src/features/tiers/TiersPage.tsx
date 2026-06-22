@@ -73,15 +73,13 @@ export default function TiersPage({ ressource, titre }: { ressource: TiersRessou
     {
       title: "Actions",
       key: "actions",
-      width: isClient ? 150 : 110,
+      width: 150,
       align: "right",
       render: (_, r) => (
         <Space>
-          {isClient && (
-            <Link to={`/tiers/clients/${r.id}/releve`}>
-              <Button size="small" icon={<FileTextOutlined />} title="Relevé de compte" />
-            </Link>
-          )}
+          <Link to={isClient ? `/tiers/clients/${r.id}/releve` : `/tiers/fournisseurs/${r.id}/releve`}>
+            <Button size="small" icon={<FileTextOutlined />} title="Relevé de compte" />
+          </Link>
           <Button size="small" icon={<EditOutlined />} onClick={() => { setEdite(r); setOpen(true); }} />
           <Popconfirm title="Supprimer ?" okText="Oui" cancelText="Non" onConfirm={() => suppression.mutate(r.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />

@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from "@/store/auth";
 import VenteForm from "./VenteForm";
 import { imprimerDocument } from "@/utils/imprimerDocument";
+import { imprimerTicket } from "@/utils/imprimerTicket";
 import { exporterCSV } from "@/utils/exportExcel";
 
 const fmt = (v: number) => Number(v).toLocaleString("fr-FR");
@@ -171,6 +172,10 @@ export default function VentesPage() {
           {v.type !== "proforma" && (
             <Button size="small" icon={<PrinterOutlined />} onClick={() => imprimer(v, "bon_livraison")}>BL</Button>
           )}
+          <Button size="small" onClick={() => imprimerTicket({
+            vente: v, entreprise: { nom: entreprise?.nom ?? "", adresse: entreprise?.adresse, telephone: entreprise?.telephone },
+            devise, caissier: useAuthStore.getState().utilisateur?.nom,
+          })}>Ticket</Button>
           {v.statut === "brouillon" && (
             <Popconfirm title="Valider ? Le stock sera mis à jour." okText="Oui" cancelText="Non" onConfirm={() => validation.mutate(v.id)}>
               <Button size="small" type="primary" icon={<CheckCircleOutlined />}>Valider</Button>
